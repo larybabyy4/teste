@@ -1,106 +1,147 @@
 import os
-import time
-from datetime import datetime
-from telethon import TelegramClient
 import asyncio
+from telethon import TelegramClient
+from datetime import datetime
+import subprocess
 
 # Telegram configuration
-API_ID = 26968169  # You need to fill this
-API_HASH = '5768aedba5732b11a1288965b57472e7'  # You need to fill this
-PHONE_NUMBER = +5516982194939  # You need to fill this
-CHAT_ID = -1002441869048  # Add your destination chat ID here
+API_ID = 26968169  # Coloque seu API_ID aqui
+API_HASH = '5768aedba5732b11a1288965b57472e7'  # Coloque seu API_HASH aqui
+PHONE_NUMBER = -5516982194939  # Coloque seu número de telefone aqui
+CHAT_ID = -1002441869048  # Coloque o ID do chat de destino aqui
+
+# Texto para sobrepor nas mídias
+TEXT_LINE1 = "DraLarissa.github.io"
+TEXT_LINE2 = "+"
 
 # Initialize Telegram client
 client = None
 
+async def add_text_to_media(input_path):
+    """Adiciona texto à mídia usando FFmpeg"""
+    try:
+        output_path = f"{os.path.splitext(input_path)[0]}_with_text{os.path.splitext(input_path)[1]}"
+        
+        # Comando FFmpeg para adicionar texto centralizado
+        command = [
+            'ffmpeg', '-i', input_path,
+            '-vf', f"drawtext=text='{TEXT_LINE1}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2-30,"
+                   f"drawtext=text='{TEXT_LINE2}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2+10",
+            '-y', output_path
+        ]
+        
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        await process.communicate()
+        
+        if process.returncode == 0 and os.path.exists(output_path):
+            os.remove(input_path)  # Remove arquivo original
+            return output_path
+        return input_path
+    except Exception as e:
+        print(f"Erro ao adicionar texto: {e}")
+        return input_path
+
 async def init_telegram():
-    """Initialize Telegram client"""
+    """Inicializa o cliente do Telegram"""
     global client
     if not all([API_ID, API_HASH, PHONE_NUMBER, CHAT_ID]):
-        print("Please set your Telegram API_ID, API_HASH, PHONE_NUMBER, and CHAT_ID in the script")
+        print("Por favor, configure API_ID, API_HASH, PHONE_NUMBER e CHAT_ID no script")
         return False
     
     try:
         client = TelegramClient('bot_session', API_ID, API_HASH)
         await client.start(phone=PHONE_NUMBER)
-        print("Successfully logged into Telegram!")
+        print("Conectado ao Telegram com sucesso!")
         return True
     except Exception as e:
-        print(f"Error logging into Telegram: {e}")
+        print(f"Erro ao conectar ao Telegram: {e}")
         return False
 
 async def process_links():
-    """Process links from a text file and simulate media operations"""
-    print("Simple Media Processor Started!")
+    """Processa links do arquivo e envia para o Telegram"""
+    print("Processador de mídia iniciado!")
     
     while True:
         try:
-            # Check if links.txt exists
             if os.path.exists('links.txt'):
                 with open('links.txt', 'r') as file:
                     links = file.readlines()
                 
-                # Process each link
+                # Limpa o arquivo após ler
+                open('links.txt', 'w').close()
+                
                 for link in links:
                     link = link.strip()
                     if link:
                         try:
-                            print(f"\nProcessing link: {link}")
-                            # Simulate downloading
-                            print("Downloading media...")
-                            await asyncio.sleep(1)  # Simulate download time
+                            print(f"\nBaixando: {link}")
+                            # Baixa usando gallery-dl
+                            process = await asyncio.create_subprocess_shell(
+                                f'gallery-dl {link}',
+                                stdout=asyncio.subprocess.PIPE,
+                                stderr=asyncio.subprocess.PIPE
+                            )
+                            await process.communicate()
                             
-                            # Simulate adding text overlay
-                            print("Adding text overlay:")
-                            print(" DraLarissa.github.io")
-                            print("+")
-                            await asyncio.sleep(1)
-                            
-                            # Simulate sending to Telegram
-                            if client and client.is_connected():
-                                print(f"Simulating send to Telegram chat {CHAT_ID}...")
-                                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                print(f"[{timestamp}] Media processed and ready to send")
-                                # Here you would actually send to Telegram using:
-                                # await client.send_message(CHAT_ID, "Your message")
-                                print("Waiting 30 seconds before next operation...")
-                                await asyncio.sleep(3)  # Reduced for demonstration
-                            else:
-                                print("Not connected to Telegram!")
-                            
+                            # Procura arquivos baixados
+                            for root, _, files in os.walk('.'):
+                                for file in files:
+                                    if file.endswith(('.jpg', '.jpeg', '.png', '.mp4', '.gif')):
+                                        file_path = os.path.join(root, file)
+                                        try:
+                                            # Adiciona texto
+                                            print(f"Adicionando texto em: {file_path}")
+                                            file_path = await add_text_to_media(file_path)
+                                            
+                                            # Envia para o Telegram
+                                            print(f"Enviando: {file_path}")
+                                            await client.send_file(CHAT_ID, file_path)
+                                            print(f"Enviado com sucesso: {file_path}")
+                                            
+                                            # Remove arquivo após enviar
+                                            if os.path.exists(file_path):
+                                                os.remove(file_path)
+                                            
+                                            # Espera 30 segundos entre envios
+                                            await asyncio.sleep(30)
+                                        except Exception as e:
+                                            print(f"Erro ao enviar {file_path}: {e}")
+                                            if os.path.exists(file_path):
+                                                os.remove(file_path)
                         except Exception as e:
-                            print(f"Error processing {link}: {str(e)}")
-                
-                # Clear the file after processing
-                open('links.txt', 'w').close()
-                print("\nAll links processed. Waiting for new links...")
+                            print(f"Erro ao processar {link}: {e}")
             
-            # Wait before checking again
-            await asyncio.sleep(2)
+            # Espera antes de verificar novos links
+            await asyncio.sleep(5)
             
         except Exception as e:
-            print(f"Error in main loop: {str(e)}")
-            await asyncio.sleep(2)
+            print(f"Erro no loop principal: {e}")
+            await asyncio.sleep(5)
 
 async def main():
-    print("=== Simple Media Processor with Telegram ===")
-    print("1. Connecting to Telegram...")
+    print("=== Processador de Mídia com Telegram ===")
+    print("1. Conectando ao Telegram...")
     
     if not await init_telegram():
-        print("Failed to initialize Telegram. Exiting...")
+        print("Falha ao inicializar Telegram. Saindo...")
         return
     
-    print("2. The program will monitor 'links.txt' for new links")
-    print("3. Each link will be processed and sent to chat ID:", CHAT_ID)
-    print("4. Press Ctrl+C to stop the program")
-    print("\nStarting processor...")
+    print("2. O programa vai monitorar 'links.txt' para novos links")
+    print("3. Cada link será processado e enviado para o chat ID:", CHAT_ID)
+    print("4. Pressione Ctrl+C para parar o programa")
+    print("\nIniciando processador...")
     
     try:
         await process_links()
     except KeyboardInterrupt:
-        print("\nProgram stopped by user")
+        print("\nPrograma interrompido pelo usuário")
     except Exception as e:
-        print(f"\nProgram error: {str(e)}")
+        print(f"\nErro no programa: {str(e)}")
     finally:
         if client:
             await client.disconnect()
