@@ -5,10 +5,10 @@ from telethon import TelegramClient
 import asyncio
 
 # Telegram configuration
-API_ID = None  # You need to fill this
-API_HASH = None  # You need to fill this
-PHONE_NUMBER = None  # You need to fill this
-CHAT_ID = None  # Add your destination chat ID here
+API_ID = 26968169  # You need to fill this
+API_HASH = '5768aedba5732b11a1288965b57472e7'  # You need to fill this
+PHONE_NUMBER = +5516982194939  # You need to fill this
+CHAT_ID = -1002441869048  # Add your destination chat ID here
 
 # Initialize Telegram client
 client = None
@@ -52,8 +52,8 @@ async def process_links():
                             
                             # Simulate adding text overlay
                             print("Adding text overlay:")
-                            print("- Line 1: Sample Text")
-                            print("- Line 2: Additional Text")
+                            print(" DraLarissa.github.io")
+                            print("+")
                             await asyncio.sleep(1)
                             
                             # Simulate sending to Telegram
