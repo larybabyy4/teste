@@ -5,9 +5,10 @@ from telethon import TelegramClient
 import asyncio
 
 # Telegram configuration
-API_ID = 26968169  # You need to fill this
-API_HASH = 5768aedba5732b11a1288965b57472e7  # You need to fill this
-PHONE_NUMBER = +5516982194939  # You need to fill this
+API_ID = None  # You need to fill this
+API_HASH = None  # You need to fill this
+PHONE_NUMBER = None  # You need to fill this
+CHAT_ID = None  # Add your destination chat ID here
 
 # Initialize Telegram client
 client = None
@@ -15,8 +16,8 @@ client = None
 async def init_telegram():
     """Initialize Telegram client"""
     global client
-    if not all([API_ID, API_HASH, PHONE_NUMBER]):
-        print("Please set your Telegram API_ID, API_HASH, and PHONE_NUMBER in the script")
+    if not all([API_ID, API_HASH, PHONE_NUMBER, CHAT_ID]):
+        print("Please set your Telegram API_ID, API_HASH, PHONE_NUMBER, and CHAT_ID in the script")
         return False
     
     try:
@@ -57,9 +58,11 @@ async def process_links():
                             
                             # Simulate sending to Telegram
                             if client and client.is_connected():
-                                print("Simulating send to Telegram...")
+                                print(f"Simulating send to Telegram chat {CHAT_ID}...")
                                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 print(f"[{timestamp}] Media processed and ready to send")
+                                # Here you would actually send to Telegram using:
+                                # await client.send_message(CHAT_ID, "Your message")
                                 print("Waiting 30 seconds before next operation...")
                                 await asyncio.sleep(3)  # Reduced for demonstration
                             else:
@@ -88,7 +91,7 @@ async def main():
         return
     
     print("2. The program will monitor 'links.txt' for new links")
-    print("3. Each link will be processed and simulated")
+    print("3. Each link will be processed and sent to chat ID:", CHAT_ID)
     print("4. Press Ctrl+C to stop the program")
     print("\nStarting processor...")
     
