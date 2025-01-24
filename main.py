@@ -5,9 +5,9 @@ from telethon import TelegramClient
 import asyncio
 
 # Telegram configuration
-API_ID = None  # You need to fill this
-API_HASH = None  # You need to fill this
-PHONE_NUMBER = None  # You need to fill this
+API_ID = 26968169  # You need to fill this
+API_HASH = 5768aedba5732b11a1288965b57472e7  # You need to fill this
+PHONE_NUMBER = +5516982194939  # You need to fill this
 
 # Initialize Telegram client
 client = None
